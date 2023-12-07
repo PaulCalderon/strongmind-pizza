@@ -71,3 +71,23 @@ class ToppingDetails(generics.GenericAPIView):
         topping = self._get_object(pk=pk)
         serializer = PizzaToppingSerializer(topping)
         return Response(serializer.data)
+
+    def put(self, request, pk):
+        """
+        Updates the currently viewed topping
+        """
+        topping = self._get_object(pk=pk)
+        serializer = PizzaToppingSerializer(topping,  data=request.data, partial=True, context= {'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk):
+        """
+        Deletes the currently viewed topping
+        """
+        topping = self._get_object(pk=pk)
+        topping.delete()
+        return Response("Sucessfully Deleted", status=status.HTTP_204_NO_CONTENT)
