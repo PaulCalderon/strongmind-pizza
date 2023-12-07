@@ -32,7 +32,7 @@ class ToppingList(generics.GenericAPIView):
         Returns a list of all pizza toppings
         """
         topping_list = self.get_queryset()
-        serializer = PizzaToppingSerializer(topping_list, many=True)
+        serializer = PizzaToppingSerializer(topping_list, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request):
@@ -40,7 +40,7 @@ class ToppingList(generics.GenericAPIView):
         Submits a new pizza topping. Must be Unique.
         """
         new_topping = request.data
-        serializer = PizzaToppingSerializer(data=new_topping)
+        serializer = PizzaToppingSerializer(data=new_topping, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -49,7 +49,7 @@ class ToppingList(generics.GenericAPIView):
 class ToppingDetails(generics.GenericAPIView):
     """
     Displays an individual topping<br>
-    Implemented methods are **GET**, **PUT**, Delete.<br>
+    Implemented methods are **GET**, **PUT**, **Delete**.<br>
     Non authenticated users will only be able to use GET.<br>
     Only 'owner' users will be able to edit and delete toppings.
     """
@@ -69,7 +69,7 @@ class ToppingDetails(generics.GenericAPIView):
         Returns an individual topping
         """
         topping = self._get_object(pk=pk)
-        serializer = PizzaToppingSerializer(topping)
+        serializer = PizzaToppingSerializer(topping, context={'request': request})
         return Response(serializer.data)
 
     def put(self, request, pk):
