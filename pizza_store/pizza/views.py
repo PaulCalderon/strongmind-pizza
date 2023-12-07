@@ -1,3 +1,4 @@
+from django.http import Http404
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
@@ -45,3 +46,28 @@ class ToppingList(generics.GenericAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class ToppingDetails(generics.GenericAPIView):
+    """
+    Displays an individual topping<br>
+    Implemented methods are **GET**, **PUT**, Delete.<br>
+    Non authenticated users will only be able to use GET.<br>
+    Only 'owner' users will be able to edit and delete toppings.
+    """
+    serializer_class = PizzaToppingSerializer
+    queryset = PizzaTopping.objects.all()
+
+    def _get_object(self, pk):
+        try:
+            topping = PizzaTopping.objects.get(pk=pk)
+            return topping
+
+        except PizzaTopping.DoesNotExist:
+            raise Http404
+        
+    def get(self, request, pk):
+        """
+        Returns an individual topping
+        """
+        topping = self._get_object(pk=pk)
+        serializer = PizzaToppingSerializer(topping)
+        return Response(serializer.data)
