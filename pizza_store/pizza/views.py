@@ -1,5 +1,5 @@
 from django.http import Http404
-from rest_framework import generics, status
+from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.decorators import api_view
@@ -24,13 +24,14 @@ class ToppingList(generics.GenericAPIView):
     """
     serializer_class = PizzaToppingSerializer
     queryset = PizzaTopping.objects.all()
-
-    #returns a json of toppings
-    #needs to implement a custom serializer to only display the toppings themselves
+    permission_classes = [permissions.DjangoModelPermissionsOrAnonReadOnly]
+    # returns a json of toppings
+    # needs to implement a custom serializer to only display the toppings themselves
     def get(self, request):
         """
         Returns a list of all pizza toppings
         """
+        # breakpoint()
         topping_list = self.get_queryset()
         serializer = PizzaToppingSerializer(topping_list, many=True, context={'request': request})
         return Response(serializer.data)
@@ -49,12 +50,13 @@ class ToppingList(generics.GenericAPIView):
 class ToppingDetails(generics.GenericAPIView):
     """
     Displays an individual topping<br>
-    Implemented methods are **GET**, **PUT**, **Delete**.<br>
+    Implemented methods are **GET**, **PUT**, **DELETE**.<br>
     Non authenticated users will only be able to use GET.<br>
     Only 'owner' users will be able to edit and delete toppings.
     """
     serializer_class = PizzaToppingSerializer
     queryset = PizzaTopping.objects.all()
+    permission_classes = [permissions.DjangoModelPermissionsOrAnonReadOnly]
 
     def _get_object(self, pk):
         try:
