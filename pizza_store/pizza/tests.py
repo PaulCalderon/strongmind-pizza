@@ -1,6 +1,8 @@
+from unittest import skip
 from django.db import IntegrityError
 from django.test import RequestFactory, TestCase
 from django.contrib.auth.models import User
+from django.urls import Resolver404, resolve
 from pizza.models import PizzaTopping
 from pizza.serializers import PizzaToppingSerializer
 from rest_framework.reverse import reverse
@@ -46,12 +48,42 @@ class TestPizzaToppingSerializer(TestCase):
 
 class TestPizzaToppingURLs(TestCase):
     
-    def test_homepage_url_is_as_expected(self):
+    def test_homepage_url_is_correct(self):
+        reverse_url = reverse(viewname='homepage')
+        resolve_url = resolve('/')
 
-        pass
+        self.assertEqual(reverse_url, '/')
+        self.assertEqual(resolve_url.url_name, 'homepage')
+
+    def test_toppings_list_url_is_correct(self):
+        reverse_url = reverse(viewname='toppings_list')
+        resolve_url = resolve('/toppings/')
+
+        self.assertEqual(reverse_url, '/toppings/')
+        self.assertEqual(resolve_url.url_name, 'toppings_list')
+    
+    def test_toppings_detail_url_is_correct(self):
+        reverse_url = reverse(viewname='toppings_detail', kwargs={'pk':1})
+        resolve_url = resolve('/toppings/1')
+
+        self.assertEqual(reverse_url, '/toppings/1')
+        self.assertEqual(resolve_url.url_name, 'toppings_detail')
+        self.assertDictEqual(resolve_url.kwargs, {'pk':1})
+
+    def test_resolving_invalid_links_should_raise_expection(self):
+
+        with self.assertRaises(Resolver404):
+            resolve('invalid_link/')
+
+    @skip("Unimplemented yet") # TODO
+    def test_invalid_link_should_raise_status_code_404(self): # integration test
+        assert False
 
 # Tests ToppingList and ToppingDetails class views
 class TestPizzaToppingViews(TestCase):
+    """
+    # Tests ToppingList and ToppingDetails class views
+    """
     def test(self):
         pass
 
