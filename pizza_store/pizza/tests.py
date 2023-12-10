@@ -80,9 +80,19 @@ class TestPizzaToppingURLs(TestCase):
         with self.assertRaises(Resolver404):
             resolve('invalid_link/')
 
-    @skip("Unimplemented yet") # TODO
-    def test_invalid_link_should_raise_status_code_404(self): # integration test
-        assert False
+class TestHomepage(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.factory = APIRequestFactory() 
+
+    @patch('pizza.views.reverse')
+    def test_homepage_response(self, mock_reverse):
+        mock_reverse.return_value = 'reversed_link'
+        request = self.factory.get('/')
+        response = homepage(request)
+        
+        self.assertEqual(response.data, {'Topping List': 'reversed_link'})
+        self.assertEqual(response.status_code, 200)
 
 class TestPizzaToppingListView(TestCase):
     """ Tests ToppingList class views"""
