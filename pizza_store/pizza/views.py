@@ -3,8 +3,8 @@ from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework.decorators import api_view
-from pizza.models import PizzaTopping
-from pizza.serializers import PizzaToppingSerializer
+from pizza.models import PizzaTopping, Pizza
+from pizza.serializers import PizzaToppingSerializer, PizzaSerializer
 
 # /
 @api_view(['GET'])
@@ -12,7 +12,9 @@ def homepage(request):
     """Click on the links below to navigate to different parts of the Pizza Store project"""
 
     return Response({
-        'Topping List' : reverse('toppings_list', request=request)})
+        'Topping List' : reverse('toppings_list', request=request),
+        'Pizza List' : reverse('pizzas_list', request=request),
+        })
 
 # toppings/
 class ToppingList(generics.GenericAPIView):
@@ -27,7 +29,7 @@ class ToppingList(generics.GenericAPIView):
     serializer_class = PizzaToppingSerializer
     queryset = PizzaTopping.objects.all()
     permission_classes = [permissions.DjangoModelPermissionsOrAnonReadOnly]
-    # needs to implement a custom serializer to only display the toppings themselves. Currently returns a json of topings
+    # needs to implement a custom serializer to only display the toppings themselves. Currently returns a json/dict of topings
     def get(self, request):
         """Returns a list of all pizza toppings."""
         topping_list = self.get_queryset()
@@ -89,3 +91,42 @@ class ToppingDetails(generics.GenericAPIView):
         topping.delete()
 
         return Response("Sucessfully Deleted", status=status.HTTP_204_NO_CONTENT)
+
+# pizza/
+class PizzaList(generics.GenericAPIView):
+    """
+    Lists pizza added by a pizza chef.<br>
+    Implemented methods are **GET**, **POST**.<br>
+    Non authenticated users will only be able to use GET.<br>
+    Only 'chef' users will be able to POST new toppings.<br>
+    URLs are included to navigate to individual pizza pages.
+    """
+
+    serializer_class = PizzaSerializer
+    queryset = Pizza.objects.all()
+    permission_classes = [permissions.DjangoModelPermissionsOrAnonReadOnly]
+    def get(self, request):
+        """Returns a list of all pizzas."""
+        topping_list = self.get_queryset()
+        serializer = PizzaSerializer(topping_list, many=True, context={'request': request})
+
+        return Response(serializer.data)
+
+    def post(self, request):
+        """Submits a new pizza. Must be unique."""
+        new_topping = request.data
+        serializer = PizzaSerializer(data=new_topping, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class PizzaDetails(generics.GenericAPIView):
+    """
+    Displays an individual topping<br>
+    Implemented methods are **GET**, **PUT**, **DELETE**.<br>
+    Non authenticated users will only be able to use GET.<br>
+    Only 'owner' users will be able to edit and delete toppings.
+    """
+    pass
