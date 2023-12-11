@@ -92,10 +92,10 @@ class ToppingDetails(generics.GenericAPIView):
 
         return Response("Sucessfully Deleted", status=status.HTTP_204_NO_CONTENT)
 
-# pizza/
+# pizzas/
 class PizzaList(generics.GenericAPIView):
     """
-    Lists pizza added by a pizza chef.<br>
+    Lists pizzas added by a pizza chef.<br>
     Implemented methods are **GET**, **POST**.<br>
     Non authenticated users will only be able to use GET.<br>
     Only 'chef' users will be able to POST new toppings.<br>
@@ -122,11 +122,48 @@ class PizzaList(generics.GenericAPIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+# pizzas/<int:pk>
 class PizzaDetails(generics.GenericAPIView):
     """
-    Displays an individual topping<br>
+    Displays an individual pizza<br>
     Implemented methods are **GET**, **PUT**, **DELETE**.<br>
     Non authenticated users will only be able to use GET.<br>
-    Only 'owner' users will be able to edit and delete toppings.
+    Only 'chef' users will be able to edit and delete pizzas.
     """
-    pass
+
+    serializer_class = PizzaSerializer
+    queryset = Pizza.objects.all()
+    permission_classes = [permissions.DjangoModelPermissionsOrAnonReadOnly]
+
+    def _get_object(self, pk):
+        try:
+            pizza = Pizza.objects.get(pk=pk)
+            return pizza
+
+        except Pizza.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk):
+        """Returns an individual pizza."""
+        pizza = self._get_object(pk=pk)
+        serializer = PizzaSerializer(pizza, context={'request': request})
+
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        """Updates the currently viewed pizza."""
+        pizza = self._get_object(pk=pk)
+        serializer = PizzaSerializer(pizza,  data=request.data, partial=True, context= {'request':request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk):
+        """Deletes the currently viewed pizza."""
+        pizza = self._get_object(pk=pk)
+        pizza.delete()
+
+        return Response("Sucessfully Deleted", status=status.HTTP_204_NO_CONTENT)
+    
