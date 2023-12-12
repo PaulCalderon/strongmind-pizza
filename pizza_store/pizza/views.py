@@ -78,7 +78,7 @@ class ToppingDetails(generics.GenericAPIView):
     def put(self, request, pk):
         """Updates the currently viewed topping."""
         topping = self._get_object(pk=pk)
-        serializer = PizzaToppingSerializer(topping,  data=request.data, partial=True, context= {'request':request})
+        serializer = PizzaToppingSerializer(topping,  data=request.data, partial=False, context= {'request':request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -153,7 +153,7 @@ class PizzaDetails(generics.GenericAPIView):
     def put(self, request, pk):
         """Updates the currently viewed pizza."""
         pizza = self._get_object(pk=pk)
-        serializer = PizzaSerializer(pizza,  data=request.data, partial=True, context= {'request':request})
+        serializer = PizzaSerializer(pizza,  data=request.data, partial=False, context= {'request':request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
