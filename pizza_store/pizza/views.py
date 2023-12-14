@@ -2,19 +2,22 @@ from django.http import Http404
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
-from rest_framework.decorators import api_view
+from rest_framework.decorators import APIView
 from pizza.models import PizzaTopping, Pizza
 from pizza.serializers import PizzaToppingSerializer, PizzaSerializer
 
+
 # /
-@api_view(['GET'])
-def homepage(request):
+class Homepage(APIView):
     """Click on the links below to navigate to different parts of the Pizza Store project"""
 
-    return Response({
-        'Topping List' : reverse('toppings_list', request=request),
-        'Pizza List' : reverse('pizzas_list', request=request),
-        })
+    def get(self, request):
+        
+        return Response({
+            'Topping List' : reverse('toppings_list', request=request),
+            'Pizza List' : reverse('pizzas_list', request=request),
+            })
+
 
 # toppings/
 class ToppingList(generics.GenericAPIView):

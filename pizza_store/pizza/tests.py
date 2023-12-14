@@ -80,19 +80,21 @@ class TestPizzaToppingURLs(TestCase):
             resolve('invalid_link/')
 
 class TestHomepage(TestCase):
+
     @classmethod
     def setUpTestData(cls):
-        cls.factory = APIRequestFactory() 
+        cls.factory = APIRequestFactory()
+        cls.homepage_view = Homepage.as_view()
 
     @patch('pizza.views.reverse')
-    def test_homepage_response(self, mock_reverse):
+    def test_homepage_response_should_contain_reversed_links(self, mock_reverse):
         mock_reverse.return_value = 'reversed_link'
-
         request = self.factory.get('/')
-        response = homepage(request)
-        
-        self.assertEqual(response.data, {'Topping List': 'reversed_link'})
+        response = self.homepage_view(request)
+
+        self.assertEqual(response.data, {'Topping List': 'reversed_link', 'Pizza List': 'reversed_link'})
         self.assertEqual(response.status_code, 200)
+
 
 class TestPizzaToppingListView(TestCase):
     """ Tests ToppingList class views"""
