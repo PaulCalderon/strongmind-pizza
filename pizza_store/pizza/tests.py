@@ -205,13 +205,13 @@ class TestPizzaToppingListView(TestCase):
         self.assertContains(response, status_code=201, text='topping data')
 
     @patch('pizza.views.PizzaToppingSerializer')
-    def test_post_should_return_403_if_user_is_unauthenticated(self, mock_serializer):
+    def test_post_should_return_401_if_user_is_not_authenticated(self, mock_serializer):
         """When sent by an unathenticated user, exception will be raised before any code in the view is executed"""
         request = self.factory.post("/toppings/", {'topping_name': 'data'}, format='json')
         response = self.topping_list_view(request)
 
         mock_serializer.assert_not_called()
-        self.assertContains(response, status_code=403, text='Authentication credentials were not provided')
+        self.assertContains(response, status_code=401, text='Authentication credentials were not provided')
     
     @patch('pizza.views.permissions.DjangoModelPermissionsOrAnonReadOnly.has_permission')
     @patch('pizza.views.PizzaToppingSerializer')
@@ -364,7 +364,7 @@ class TestPizzaToppingDetailsView(TestCase):
         self.assertContains(response, status_code=400, text='invalid data')
 
     @patch('pizza.views.PizzaTopping.objects.get')
-    def test_put_should_return_403_if_user_is_unauthenticated(self, mock_get_object):
+    def test_put_should_return_401_if_user_is_not_authenticated(self, mock_get_object):
         """When sent by an unathenticated user, exception will be raised before any code in the view is executed"""
         pk = 1
         data = {'topping_name': 'data'}
@@ -373,7 +373,7 @@ class TestPizzaToppingDetailsView(TestCase):
 
         mock_get_object.assert_not_called()
         self.assertTrue(request.user.is_anonymous)
-        self.assertContains(response, status_code=403, text='Authentication credentials were not provided')
+        self.assertContains(response, status_code=401, text='Authentication credentials were not provided')
 
     @patch('pizza.views.PizzaTopping.objects.get')
     @patch('pizza.views.permissions.DjangoModelPermissionsOrAnonReadOnly.has_permission')
@@ -414,7 +414,7 @@ class TestPizzaToppingDetailsView(TestCase):
         self.assertContains(response, status_code=204, text='Sucessfully Deleted')
 
     @patch('pizza.views.PizzaTopping.objects.get')
-    def test_delete_should_return_403_for_unathenticated_user(self, mock_get_object):
+    def test_delete_should_return_401_if_user_is_not_authenticated(self, mock_get_object):
         """When accessed by an unathenticated user, exception will be raised before any code in the view"""
         mock_get_object.return_value = MagicMock()
         pk=1
@@ -423,7 +423,7 @@ class TestPizzaToppingDetailsView(TestCase):
 
         # topping.delete() was not called
         mock_get_object.return_value.delete.assert_not_called()
-        self.assertContains(response, status_code=403, text='Authentication credentials were not provided')
+        self.assertContains(response, status_code=401, text='Authentication credentials were not provided')
 
     @patch('pizza.views.PizzaTopping.objects.get')
     @patch('pizza.views.permissions.DjangoModelPermissionsOrAnonReadOnly.has_permission')
@@ -508,12 +508,12 @@ class TestPizzaListView(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIsInstance(response, Response)
         
-    def test_post_should_return_403_if_user_has_no_permission(self):
+    def test_post_should_return_401_if_user_has_no_permission(self):
         self.permission_patcher.stop() # stops mocking of permission
         request = self.factory.post("/toppings/", {'pizza' : 'valid', 'toppings' : ['topping']}, format='json')
         response = self.pizza_list_view(request)
 
-        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, status_code=401, text='Authentication credentials were not provided.')
 
 
 class TestPizzaDetailsView(TestCase):
@@ -581,12 +581,12 @@ class TestPizzaDetailsView(TestCase):
         self.assertIsInstance(response, Response)
 
     @patch('pizza.views.PizzaSerializer')
-    def test_put_should_return_403_if_user_has_no_permission(self, mock_serializer):
+    def test_put_should_return_401_if_user_is_not_authenticated(self, mock_serializer):
         self.permission_patcher.stop() # stops mocking of permission
         request = self.factory.put(f'/pizzas/{self.pk}', {'pizza' : 'duplicate', 'toppings' : ['topping']})
         response = self.pizza_details_view(request, pk=self.pk)
 
-        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, status_code=401, text='Authentication credentials were not provided.')
 
     def test_delete_should_return_204_with_response_if_delete_is_successful(self): 
         request = self.factory.delete(f'/pizzas/{self.pk}')
@@ -595,9 +595,9 @@ class TestPizzaDetailsView(TestCase):
         self.assertContains(response, status_code=204, text='Sucessfully Deleted')
         self.assertIsInstance(response, Response)
 
-    def test_delete_should_return_403_if_user_has_no_permission(self):
+    def test_delete_should_return_401_if_user_is_not_authenticated(self):
         self.permission_patcher.stop() # stops mocking of permission
         request = self.factory.delete(f'/pizzas/{self.pk}', {'pizza' : 'duplicate', 'topping' : ['topping']})
         response = self.pizza_details_view(request, pk=self.pk)
 
-        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, status_code=401, text='Authentication credentials were not provided.')
