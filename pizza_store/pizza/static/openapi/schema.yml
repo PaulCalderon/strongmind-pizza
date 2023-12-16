@@ -1,0 +1,339 @@
+openapi: 3.0.2
+info:
+  title: 'Pizza Store API'
+  version: '1.0'
+  description: |-
+
+    This is the OpenAPI documentation of all the API endpoints in the Pizza Store project.
+    
+    Use the Authorize button to authenticate the request for write operations.
+    
+    Some useful links:
+    - [Link to github repository](https://github.com/PaulCalderon/strongmind-pizza)
+    - [Link to deployed project](http://pizzastoredeployment-env.eba-ywgipkmu.ap-southeast-1.elasticbeanstalk.com/)
+
+tags:
+  - name: toppings
+    description: Manage Toppings
+  - name: pizzas
+    description: Manage Pizzas
+  - name: Homepage
+    description: Links to different parts of website
+
+paths:
+  /toppings/:
+    get:
+      operationId: listPizzaToppings
+      description: Returns a list of all pizza toppings.
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PizzaTopping'
+          description: 'Sucessful GET'
+      tags:
+      - toppings
+    post:
+      operationId: createPizzaTopping
+      description: Submits a new pizza topping. Must be unique.
+      security:
+        - BasicAuth: []
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PizzaTopping'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PizzaTopping'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PizzaTopping'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PizzaTopping'
+          description: 'Sucessful POST'
+        '400':
+          description: Missing fields or duplicate topping
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized
+      tags:
+      - toppings
+  /toppings/{id}:
+    get:
+      operationId: retrievePizzaTopping
+      description: Returns an individual topping.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: A unique integer value identifying this pizza topping.
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PizzaTopping'
+          description: 'Sucessful GET'
+      tags:
+      - toppings
+    put:
+      operationId: updatePizzaTopping
+      description: Updates the topping entry.
+      security:
+        - BasicAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: A unique integer value identifying this pizza topping.
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PizzaTopping'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PizzaTopping'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PizzaTopping'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PizzaTopping'
+          description: 'Successful PUT'
+        '400':
+          description: Missing fields or duplicate topping
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized
+        '404':
+          description: Topping not found
+      tags:
+      - toppings
+    delete:
+      operationId: destroyPizzaTopping
+      description: Deletes the topping entry.
+      security:
+        - BasicAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: A unique integer value identifying this pizza topping.
+        schema:
+          type: string
+      responses:
+        '204':
+          description: 'Successful DELETE'
+        '404':
+          description: 'Not found'
+      tags:
+      - toppings
+  /pizzas/:
+    get:
+      operationId: listPizzas
+      description: Returns a list of all pizzas.
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pizza'
+          description: 'Successful GET'
+      tags:
+      - pizzas
+    post:
+      operationId: createPizza
+      description: Submits a new pizza. Must be unique. <br> Topping used should have an entry.
+      security:
+        - BasicAuth: []
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pizza'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Pizza'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Pizza'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pizza'
+          description: 'Sucessful POST'
+        '400':
+          description: Missing fields or duplicate pizza or included a non existent topping
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized
+      tags:
+      - pizzas
+  /pizzas/{id}:
+    get:
+      operationId: retrievePizza
+      description: Returns an individual pizza.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: A unique integer value identifying this pizza.
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pizza'
+          description: 'Sucessful GET'
+        '404':
+          description: 'Not found'
+      tags:
+      - pizzas
+    put:
+      operationId: updatePizza
+      description: Updates the pizza.
+      security:
+        - BasicAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: A unique integer value identifying this pizza.
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pizza'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Pizza'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Pizza'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pizza'
+          description: 'Sucessful PUT'
+        '400':
+          description: Missing fields or duplicate pizza or included a non existent topping
+        '401':
+          description: Not authenticated
+        '403':
+          description: Not authorized
+        '404':
+          description: Not found
+      tags:
+      - pizzas
+    delete:
+      operationId: destroyPizza
+      description: Deletes the pizza entry.
+      security:
+        - BasicAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: A unique integer value identifying this pizza.
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Sucessful DELETE
+        '401':
+          description: Not authenticated
+        '404':
+          description: Not found
+      tags:
+      - pizzas
+  /:
+    get:
+      operationId: listHomepages
+      description: Click on the links below to navigate to different parts of the
+        Pizza Store project
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              example:  [
+                {
+                Topping List : "http://127.0.0.1:8000/toppings/", 
+                Pizza List : "http://127.0.0.1:8000/pizzas/" ,
+                Swagger: "http://127.0.0.1:8000/swagger-index"
+                }
+                        ]
+          description: 'Successful operation'
+      tags:
+      - Homepage
+components:
+  schemas:
+    PizzaTopping:
+      type: object
+      properties:
+        topping:
+          type: string
+          maxLength: 200
+          example: Cheese
+        url:
+          type: string
+          readOnly: true
+          example: http://127.0.0.1:8000/toppings/1
+      required:
+      - topping
+    Pizza:
+      type: object
+      properties:
+        pizza:
+          type: string
+          maxLength: 200
+          example: Cheese Pizza
+        toppings:
+          type: array
+          items:
+            type: string
+            example: Cheese
+        url:
+          type: string
+          readOnly: true
+          example: http://127.0.0.1:8000/pizzas/1
+      required:
+      - pizza
+      - toppings
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
