@@ -405,3 +405,157 @@ class TestPizzaToppingDetailsView(TestCase):
 
         self.assertContains(response, status_code=405, text='Method \\"POST\\" not allowed')
 
+
+class TestPizzaListView(TestCase):
+    """Tests PizzaList class views"""
+
+    @classmethod
+    def setUpTestData(cls):
+        #  Stubs queryset result
+        stub_topping = MagicMock()
+        stub_topping.topping = 'Stub Topping'
+        stub_topping.pk = 1
+        cls.stub_topping_query_set = MagicMock()
+        cls.stub_topping_query_set.__iter__.return_value = [stub_topping]
+        stub_pizza = MagicMock()
+        stub_pizza.pizza = 'Stub Pizza'
+        stub_pizza.pk = 1
+        stub_pizza.toppings = [stub_topping]
+        cls.stub_query_set = MagicMock()
+        cls.stub_query_set.__iter__.return_value = [stub_pizza]
+
+        cls.factory = APIRequestFactory()
+        cls.pizza_list_view = PizzaList.as_view()
+
+    def setUp(self):
+        self.permission_patcher = patch('pizza.views.permissions.DjangoModelPermissionsOrAnonReadOnly.has_permission', return_value=True)
+        self.permission_patcher.start()
+
+    def tearDown(self):
+        self.permission_patcher.stop()
+
+    @patch('pizza.views.ToppingList.get_queryset')
+    @patch('pizza.views.PizzaList.get_queryset')
+    def test_get_should_return_200_and_response_with_pizza_list(self, mock_get_queryset, mock_topping_queryset):
+        mock_get_queryset.return_value = self.stub_query_set
+        mock_topping_queryset.return_value = self.stub_topping_query_set
+        request = self.factory.get('/')
+        response = self.pizza_list_view(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]['pizza'], 'Stub Pizza')
+        self.assertEqual(response.data[0]['toppings'], ['Stub Topping'])
+        self.assertIsInstance(response, Response)
+
+    def test_post_should_return_201_with_response_if_serializer_is_valid(self):
+        # serialize_is_valid == False when topping is without entry in dapatabase
+        PizzaTopping.objects.create(topping='Stub Topping')
+        request = self.factory.post("/pizza/", {'pizza' : 'valid', 'toppings' : ['Stub Topping']}, format='json')
+        response = self.pizza_list_view(request)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['pizza'], 'valid')
+        self.assertEqual(response.data['toppings'], ['Stub Topping'])
+        self.assertIsInstance(response, Response)
+
+    def test_post_should_return_400_with_response_if_serializer_is_invalid(self):
+        """400 is returned when a duplicate entry or there's a missing field"""
+        request = self.factory.post("/pizza/", {'missing field' : 'duplicate'},format='json')
+        response = self.pizza_list_view(request)
+        
+        self.assertEqual(response.status_code, 400)
+        self.assertIsInstance(response, Response)
+        
+    def test_post_should_return_403_if_user_has_no_permission(self):
+        self.permission_patcher.stop() # stops mocking of permission
+        request = self.factory.post("/toppings/", {'pizza' : 'valid', 'toppings' : ['topping']}, format='json')
+        response = self.pizza_list_view(request)
+
+        self.assertEqual(response.status_code, 403)
+
+
+class TestPizzaDetailsView(TestCase):
+    """ Tests PizzaDetails class views"""
+
+    @classmethod
+    def setUpTestData(cls):
+        stub_topping = MagicMock()
+        stub_topping.topping = 'Stub Topping'
+        stub_topping.pk = 1
+        cls.stub_pizza = MagicMock()
+        cls.stub_pizza.pizza = 'Stub Pizza'
+        cls.stub_pizza.pk = 1
+        cls.stub_pizza.toppings = [stub_topping]
+
+        cls.factory = APIRequestFactory()
+        cls.pizza_details_view = PizzaDetails.as_view()
+        cls.pk = 1
+
+        topping = PizzaTopping.objects.create(topping='existing topping')
+        pizza = Pizza.objects.create(pizza='existing pizza')
+
+    def setUp(self):
+        self.permission_patcher = patch('pizza.views.permissions.DjangoModelPermissionsOrAnonReadOnly.has_permission', return_value=True)
+        self.permission_patcher.start()
+
+    def tearDown(self):
+        self.permission_patcher.stop()
+    
+    @patch.object(Pizza.objects, 'get')
+    def test_get_object_returns_404_when_pizza_does_not_exist(self, mock_get_object):
+        """Test overidden method"""
+        mock_get_object.side_effect = Pizza.DoesNotExist
+        pizza_detail_instance = PizzaDetails()
+
+        with self.assertRaises(Http404):
+            pizza_detail_instance._get_object(pk=1)
+
+    @patch('pizza.views.Pizza.objects.get')
+    def test_get_should_return_200_and_response_data_if_pizza_exists(self, mock_object_get):
+        """get_object will raise http404 if pizza doesn't exist"""
+        mock_object_get.return_value = self.stub_pizza # stubs database call
+        request = self.factory.get(f'/pizzas/{self.pk}')
+        response = self.pizza_details_view(request, pk=self.pk)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['pizza'], 'Stub Pizza')
+        self.assertEqual(response.data['toppings'], ['Stub Topping'])
+        self.assertIsInstance(response, Response)
+
+    def test_put_should_return_200_with_response_if_pizza_is_serializer_is_valid(self):
+        request = self.factory.put(f'/pizzas/{self.pk}', {'pizza' : 'Put Pizza', 'toppings' : []}, format='json')
+        response = self.pizza_details_view(request, pk=self.pk)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['pizza'], 'Put Pizza')
+        self.assertIsInstance(response, Response)
+
+    def test_put_should_return_400_with_response_if_pizza_is_serializer_is_invalid(self):
+        """400 is returned when a duplicate entry or there's a missing field"""
+        request = self.factory.put(f'/pizzas/{self.pk}', {'pizza' : 'duplicate'}, format='json') #  missing toppings
+        response = self.pizza_details_view(request, pk=self.pk)
+
+        self.assertContains(response, status_code=400, text='This field is required.')
+        self.assertIsInstance(response, Response)
+
+    @patch('pizza.views.PizzaSerializer')
+    def test_put_should_return_403_if_user_has_no_permission(self, mock_serializer):
+        self.permission_patcher.stop() # stops mocking of permission
+        request = self.factory.put(f'/pizzas/{self.pk}', {'pizza' : 'duplicate', 'toppings' : ['topping']})
+        response = self.pizza_details_view(request, pk=self.pk)
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_delete_should_return_204_with_response_if_delete_is_successful(self): 
+        request = self.factory.delete(f'/pizzas/{self.pk}')
+        response = self.pizza_details_view(request, pk=self.pk)
+
+        self.assertContains(response, status_code=204, text='Sucessfully Deleted')
+        self.assertIsInstance(response, Response)
+
+    def test_delete_should_return_403_if_user_has_no_permission(self):
+        self.permission_patcher.stop() # stops mocking of permission
+        request = self.factory.delete(f'/pizzas/{self.pk}', {'pizza' : 'duplicate', 'topping' : ['topping']})
+        response = self.pizza_details_view(request, pk=self.pk)
+
+        self.assertEqual(response.status_code, 403)
