@@ -39,6 +39,41 @@ class TestPizzaToppingModel(TestCase):
         self.assertEqual(str(topping_instance), 'Bacon')
 
 
+class TestPizzaModel(TestCase):
+
+    def setUp(self):
+        self.pizza_field = Pizza._meta.get_field('pizza')
+        self.topping_field = Pizza._meta.get_field('toppings')
+        self.pizza_fields = [field.name for field in Pizza._meta.get_fields()]
+
+    def test_model_should_have_pizza_field(self):
+
+        self.assertIn('pizza', self.pizza_fields)
+    
+    def test_model_should_have_topping_field(self):
+
+        self.assertIn('toppings', self.pizza_fields)
+
+    def test_pizza_field_should_have_unique_constraint(self):
+
+        self.assertTrue(self.pizza_field.unique)
+
+    def test_pizza_field_db_collation_should_be_set_nocase(self):
+        """db_collation set to 'NOCASE' in sqlite3 ensures uniqueness is case insensitive"""
+
+        self.assertEqual(self.pizza_field.db_collation, 'NOCASE')
+        
+    def test_topping_is_many_to_many_field(self):
+        
+        self.assertTrue(self.topping_field.many_to_many)
+
+    def test_str_should_be_same_as_topping_field(self):
+        """__str__ of the instance should be topping field"""
+        pizza_instance = Pizza(pizza='Bacon Pizza')
+
+        self.assertEqual(str(pizza_instance), 'Bacon Pizza')
+
+
 class TestPizzaToppingSerializer(TestCase):
 
     def test_contains_additional_fields_declared_in_serializer(self):
@@ -46,6 +81,13 @@ class TestPizzaToppingSerializer(TestCase):
 
         self.assertIn('url', serializer.fields)
 
+
+class TestPizzaSerializer(TestCase):
+
+    def test_contains_additional_fields_declared_in_serializer(self):
+        serializer = PizzaSerializer()
+
+        self.assertIn('url', serializer.fields)
 
 class TestPizzaAppURLs(TestCase):
     """Unit tests for URL Conf"""
