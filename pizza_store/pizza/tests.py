@@ -476,6 +476,7 @@ class TestPizzaListView(TestCase):
     @patch('pizza.views.ToppingList.get_queryset')
     @patch('pizza.views.PizzaList.get_queryset')
     def test_get_should_return_200_and_response_with_pizza_list(self, mock_get_queryset, mock_topping_queryset):
+        # stubs database call
         mock_get_queryset.return_value = self.stub_query_set
         mock_topping_queryset.return_value = self.stub_topping_query_set
         request = self.factory.get('/')
@@ -485,6 +486,20 @@ class TestPizzaListView(TestCase):
         self.assertEqual(response.data[0]['pizza'], 'Stub Pizza')
         self.assertEqual(response.data[0]['toppings'], ['Stub Topping'])
         self.assertIsInstance(response, Response)
+
+    @patch('pizza.views.ToppingList.get_queryset')
+    @patch('pizza.views.PizzaList.get_queryset')
+    def test_get_should_allow_anonymous_users_to_see_topping_list(self, mock_get_queryset, mock_topping_queryset):
+        self.permission_patcher.stop()  # stops mocking permission
+        # stubs database call
+        mock_get_queryset.return_value = self.stub_query_set
+        mock_topping_queryset.return_value = self.stub_topping_query_set
+        request = self.factory.get('/')
+        response = self.pizza_list_view(request)
+
+        self.assertTrue(request.user.is_anonymous)
+        self.assertContains(response, status_code=200, text='Stub Pizza')
+        self.assertEqual(response.data[0]['toppings'], ['Stub Topping'])
 
     def test_post_should_return_201_with_response_if_serializer_is_valid(self):
         # serialize_is_valid == False when topping is without entry in dapatabase
@@ -501,16 +516,31 @@ class TestPizzaListView(TestCase):
         """400 is returned when a duplicate entry or there's a missing field"""
         request = self.factory.post("/pizza/", {'missing field' : 'duplicate'},format='json')
         response = self.pizza_list_view(request)
-        
-        self.assertEqual(response.status_code, 400)
+
+        self.assertContains(response, status_code=400, text='This field is required.')
         self.assertIsInstance(response, Response)
-        
-    def test_post_should_return_401_if_user_has_no_permission(self):
-        self.permission_patcher.stop() # stops mocking of permission
+
+    def test_post_should_return_401_if_user_is_not_authenticated(self):
+        """When sent by an unathenticated user, exception will be raised before any code in the view is executed"""
+        self.permission_patcher.stop() # stops mocking permission
         request = self.factory.post("/toppings/", {'pizza' : 'valid', 'toppings' : ['topping']}, format='json')
         response = self.pizza_list_view(request)
 
         self.assertContains(response, status_code=401, text='Authentication credentials were not provided.')
+
+    def test_unimplemented_put_should_return_405(self):
+        """Only GET and POST are implemented"""
+        request = self.factory.put("/pizzas/", {'topping': 'data'}, format='json')
+        response = self.pizza_list_view(request)
+
+        self.assertContains(response, status_code=405, text='Method \\"PUT\\" not allowed')
+
+    def test_unimplemeneted_delete_should_return_405(self):
+        """Only GET and POST are implemented"""
+        request = self.factory.delete("/pizzas/")
+        response = self.pizza_list_view(request)
+
+        self.assertContains(response, status_code=405, text='Method \\"DELETE\\" not allowed')
 
 
 class TestPizzaDetailsView(TestCase):
