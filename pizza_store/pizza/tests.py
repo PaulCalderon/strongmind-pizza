@@ -1,16 +1,13 @@
-from unittest import skip
-from unittest.mock import patch, MagicMock, ANY
-from django.db import IntegrityError
+from unittest.mock import patch, MagicMock
 from django.test import TestCase
-# from django.contrib.auth.models import User, Permission
-from django.urls import Resolver404, resolve
+from django.urls import resolve
 from django.http import Http404
-from rest_framework import permissions
+from rest_framework.response import Response
 from rest_framework.reverse import reverse
-from rest_framework.test import APIRequestFactory, force_authenticate
-from pizza.models import PizzaTopping
-from pizza.serializers import PizzaToppingSerializer
-from pizza.views import ToppingList, ToppingDetails, Homepage
+from rest_framework.test import APIRequestFactory
+from pizza.models import PizzaTopping, Pizza
+from pizza.serializers import PizzaToppingSerializer, PizzaSerializer
+from pizza.views import ToppingList, ToppingDetails, Homepage, PizzaList, PizzaDetails
 
 
 class TestPizzaToppingModel(TestCase):
@@ -542,15 +539,15 @@ class TestPizzaDetailsView(TestCase):
 
     def tearDown(self):
         self.permission_patcher.stop()
-    
+
     @patch.object(Pizza.objects, 'get')
-    def test_get_object_returns_404_when_pizza_does_not_exist(self, mock_get_object):
+    def test_get_object_returns_404_if_pizza_does_not_exist(self, mock_get_object):
         """Test overidden method"""
         mock_get_object.side_effect = Pizza.DoesNotExist
         pizza_detail_instance = PizzaDetails()
 
         with self.assertRaises(Http404):
-            pizza_detail_instance._get_object(pk=1)
+            pizza_detail_instance._get_object(pk=self.pk)
 
     @patch('pizza.views.Pizza.objects.get')
     def test_get_should_return_200_and_response_data_if_pizza_exists(self, mock_object_get):
@@ -564,40 +561,90 @@ class TestPizzaDetailsView(TestCase):
         self.assertEqual(response.data['toppings'], ['Stub Topping'])
         self.assertIsInstance(response, Response)
 
-    def test_put_should_return_200_with_response_if_pizza_is_serializer_is_valid(self):
+    @patch('pizza.views.Pizza.objects.get')
+    def test_get_should_allow_anonymous_users_to_see_pizza_details(self, mock_object_get):
+        self.permission_patcher.stop()  # stops mocking permission
+        mock_object_get.return_value = self.stub_pizza  # stubs database call
+        request = self.factory.get(f'/pizzas/{self.pk}/')
+        response = self.pizza_details_view(request, pk=self.pk)
+
+        self.assertTrue(request.user.is_anonymous)
+        self.assertContains(response, status_code=200, text='Stub Pizza')
+
+    @patch('pizza.views.Pizza.objects.get')
+    def test_get_should_return_404_if_pizza_does_not_exist(self, mock_object_get) :
+        """Objects.get raise exception to simulate not existing"""
+        mock_object_get.side_effect = Pizza.DoesNotExist
+        request = self.factory.get(f'/pizzas/{self.pk}/')
+        response = self.pizza_details_view(request, pk=self.pk)
+
+        self.assertContains(response, status_code=404, text='Not found.')
+
+    def test_put_should_return_200_with_response_is_serializer_is_valid(self):
         request = self.factory.put(f'/pizzas/{self.pk}', {'pizza' : 'Put Pizza', 'toppings' : []}, format='json')
         response = self.pizza_details_view(request, pk=self.pk)
         
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['pizza'], 'Put Pizza')
+        self.assertContains(response, status_code=200, text='Put Pizza')
         self.assertIsInstance(response, Response)
 
-    def test_put_should_return_400_with_response_if_pizza_is_serializer_is_invalid(self):
+    def test_put_should_return_400_with_response_is_serializer_is_invalid(self):
         """400 is returned when a duplicate entry or there's a missing field"""
-        request = self.factory.put(f'/pizzas/{self.pk}', {'pizza' : 'duplicate'}, format='json') #  missing toppings
+        request = self.factory.put(f'/pizzas/{self.pk}', {'pizza' : 'duplicate', 'missing' : ['topping']}, format='json') 
         response = self.pizza_details_view(request, pk=self.pk)
 
         self.assertContains(response, status_code=400, text='This field is required.')
         self.assertIsInstance(response, Response)
 
-    @patch('pizza.views.PizzaSerializer')
-    def test_put_should_return_401_if_user_is_not_authenticated(self, mock_serializer):
-        self.permission_patcher.stop() # stops mocking of permission
+    def test_put_should_return_401_if_user_is_not_authenticated(self):
+        """When sent by an unathenticated user, exception will be raised before any code in the view is executed"""
+        self.permission_patcher.stop() # stops mocking permission
         request = self.factory.put(f'/pizzas/{self.pk}', {'pizza' : 'duplicate', 'toppings' : ['topping']})
         response = self.pizza_details_view(request, pk=self.pk)
 
         self.assertContains(response, status_code=401, text='Authentication credentials were not provided.')
 
-    def test_delete_should_return_204_with_response_if_delete_is_successful(self): 
+    @patch('pizza.views.Pizza.objects.get')
+    def test_put_should_return_404_if_pizza_does_not_exist(self, mock_object_get):
+        """Objects.get raise exception to simulate not existing"""
+        mock_object_get.side_effect = Pizza.DoesNotExist
+        request = self.factory.put(f'/pizzas/{self.pk}', {'pizza' : 'Put Pizza', 'toppings' : []}, format='json')
+        response = self.pizza_details_view(request, pk=self.pk)
+
+        self.assertContains(response, status_code=404, text='Not found')
+
+    @patch('pizza.views.Pizza.objects.get')
+    def test_delete_should_return_204_with_response_if_delete_is_successful(self, mock_object_get):
+        mock_object_get.return_value = MagicMock()
         request = self.factory.delete(f'/pizzas/{self.pk}')
         response = self.pizza_details_view(request, pk=self.pk)
 
+        mock_object_get.return_value.delete.called  # pizza.delete()
         self.assertContains(response, status_code=204, text='Sucessfully Deleted')
         self.assertIsInstance(response, Response)
 
-    def test_delete_should_return_401_if_user_is_not_authenticated(self):
-        self.permission_patcher.stop() # stops mocking of permission
-        request = self.factory.delete(f'/pizzas/{self.pk}', {'pizza' : 'duplicate', 'topping' : ['topping']})
+    @patch('pizza.views.Pizza.objects.get')
+    def test_delete_should_return_401_if_user_is_not_authenticated(self, mock_object_get):
+        """When sent by an unathenticated user, exception will be raised before any code in the view is executed"""
+        self.permission_patcher.stop() # stops mocking permission
+        request = self.factory.delete(f'/pizzas/{self.pk}')
         response = self.pizza_details_view(request, pk=self.pk)
 
+        # topping.delete() was not called
+        mock_object_get.return_value.delete.assert_not_called()
         self.assertContains(response, status_code=401, text='Authentication credentials were not provided.')
+
+    @patch('pizza.views.Pizza.objects.get')
+    def test_delete_should_return_404_if_pizza_does_not_exist(self, mock_object_get):
+        """Objects.get raise exception to simulate not existing"""
+        mock_object_get.side_effect = Pizza.DoesNotExist
+        request = self.factory.delete(f'/pizzas/{self.pk}', format='json')
+        response = self.pizza_details_view(request, pk=self.pk)
+
+        self.assertContains(response, status_code=404, text='Not found')
+
+    def test_unimplemented_post_should_return_405(self):
+        """Only GET, PUT and DELETE are implemented"""
+        request = self.factory.post("/pizzas/", {'pizza': 'data'}, format='json')
+        response = self.pizza_details_view(request)
+
+        self.assertContains(response, status_code=405, text='Method \\"POST\\" not allowed')
