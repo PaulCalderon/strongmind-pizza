@@ -82,9 +82,11 @@ class TestPizzaToppingSerializer(TestCase):
 class TestPizzaSerializer(TestCase):
 
     def test_contains_additional_fields_declared_in_serializer(self):
+
         serializer = PizzaSerializer()
 
         self.assertIn('url', serializer.fields)
+
 
 class TestPizzaAppURLs(TestCase):
     """Unit tests for URL Conf"""
@@ -140,7 +142,7 @@ class TestHomepage(TestCase):
         request = self.factory.get('/')
         response = self.homepage_view(request)
 
-        self.assertEqual(response.data, {'Topping List': 'reversed_link', 'Pizza List': 'reversed_link'})
+        self.assertEqual(response.data, {'Topping List': 'reversed_link', 'Pizza List': 'reversed_link', 'Swagger' : 'reversed_link'})
         self.assertEqual(response.status_code, 200)
 
 
