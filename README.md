@@ -41,9 +41,10 @@ pip install -r requirements.txt
 ```
 Alternatively, you can use the package manager pip to only install the packages below.
 ```python
-pip install django==4.2
+pip install Django==4.2
 pip install djangorestframework==3.14
 pip install whitenoise==6.6.0
+pip install Markdown==3.5.1
 ```
 The GitHub repository includes a sqlite database with pre configured groups and users.
 
@@ -56,6 +57,7 @@ The GitHub repository includes a sqlite database with pre configured groups and 
 | owner | 1234 | Pizza Owner
 | chef | 1234 | Pizza Chef
 | admin | 1234 | superuser*
+
 *granted all permissions**
 
 If you decide to not use the database from the repository, you can delete the old database and create a new database by running:
@@ -101,13 +103,27 @@ You can send a HTTP request to the API and receive a JSON response based on the 
     - For the toppings, only users in the *Pizza Owner* group can write data e.g POST, PUT, DELETE
     - For the pizzas, only users in the *Pizza Chef* group can write data e.g POST, PUT, DELETE
 
+**You can send raw JSON with the request instead of using the HTML forms. The format is as follows:**
 
-You can also use sites like [reqbin](https://reqbin.com/) to send requests to the API. You can provide the login details using Basic Auth. 
+```json
+ { "topping" : "name of the topping" }
+ ```
+ ```json
+ { "pizza" : "name of the pizza", "toppings" : ["name of existing topping"] }
+ ```
 
-- *A raw GET request for an individual topping with id = 1*
+*For pizzas, the toppings in the request must have an entry, otherwise an error will be raised.*
+
+###### You can also use sites like [reqbin](https://reqbin.com/) to send requests to the API. You can provide the login details using Basic Auth. 
+
+- *A raw POST request for an individual topping*
 ```
-GET /toppings/1 HTTP/1.1
+POST /toppings/ HTTP/1.1
 Host: pizzastoredeployment-env.eba-ywgipkmu.ap-southeast-1.elasticbeanstalk.com
+Content-Type: application/json
+Content-Length: 34
+
+{ "topping" : "topping to be add"}
 ```
 ##### /toppings 
 - Displays a list of toppings (GET)
@@ -118,6 +134,7 @@ Host: pizzastoredeployment-env.eba-ywgipkmu.ap-southeast-1.elasticbeanstalk.com
 - Edit an existing topping (PUT)
 - Delete an existing topping (DELETE)
 
+
 ##### /pizzas 
 - Display a list of pizzas (GET)
 - Create a new pizza and include existing toppings (POST)
@@ -126,6 +143,8 @@ Host: pizzastoredeployment-env.eba-ywgipkmu.ap-southeast-1.elasticbeanstalk.com
 - Displays an individual pizza (GET)
 - Edit an existing pizza (POST)
 - Delete an existing pizza (DELETE)
+
+
 
 The [swagger](#swagger) documentation has a more detailed explanation of the endpoints
 
@@ -217,3 +236,4 @@ Various points of improvements for the project. (may or may not be feasible)
  - Refactor integration to have less hardcoded variables and tests.
  - Refactor tests with regards to DRY.
  - Create models in mermaid js for the readme.
+ - Give more feedback after write methods. 
