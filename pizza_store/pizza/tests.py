@@ -149,95 +149,77 @@ class TestPizzaToppingListView(TestCase):
 
     @classmethod
     def setUpTestData(cls):
+        #  Stubs queryset result
+        stub_topping = MagicMock()
+        stub_topping.topping = 'Stub Topping'
+        stub_topping.pk = 1
+        cls.stub_topping_query_set = MagicMock()
+        cls.stub_topping_query_set.__iter__.return_value = [stub_topping]
+
         cls.factory = APIRequestFactory()
         cls.topping_list_view = ToppingList.as_view()
 
-    @patch('pizza.views.ToppingList.get_queryset')  # bit complicated to mock return of get_queryset
-    @patch('pizza.views.PizzaToppingSerializer')
-    def test_get_should_return_topping_list(self, mock_serializer, mock_get_queryset):
-        """Checks if serializer processed queryset and returns serialized data."""
-        get_queryset_instance = mock_get_queryset.return_value
-        mock_serializer_instance = mock_serializer.return_value
-        mock_serializer_instance.data = 'topping list'
+    def setUp(self):
+        self.permission_patcher = patch('pizza.views.permissions.DjangoModelPermissionsOrAnonReadOnly.has_permission', return_value=True)
+        self.permission_patcher.start()
+
+    def tearDown(self):
+        self.permission_patcher.stop()
+
+    @patch('pizza.views.ToppingList.get_queryset')
+    def test_get_should_return_200_and_response_with_topping_list(self, mock_topping_queryset):
+        mock_topping_queryset.return_value = self.stub_topping_query_set  # stubs database call
         request = self.factory.get('/')
         response = self.topping_list_view(request)
 
-        mock_serializer.assert_called_with(get_queryset_instance, many=ANY, context=ANY)
-        self.assertContains(response, status_code=200, text='topping list')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]['topping'], 'Stub Topping')
+        self.assertIsInstance(response, Response)
 
-    @patch('pizza.views.ToppingList.get_queryset')  # bit complicated to mock return of get_queryset
-    @patch('pizza.views.PizzaToppingSerializer')
-    def test_get_should_allow_anonymous_users_to_see_topping_list(self, mock_serializer, mock_get_queryset):
-        mock_instance = mock_serializer.return_value
-        mock_instance.data = 'topping list'
+    @patch('pizza.views.ToppingList.get_queryset')
+    def test_get_should_allow_anonymous_users_to_see_topping_list(self, mock_topping_queryset):
+        self.permission_patcher.stop()  # stops mocking permission
+        mock_topping_queryset.return_value = self.stub_topping_query_set  # stubs database call
         request = self.factory.get('/')
         response = self.topping_list_view(request)
-        
+
         self.assertTrue(request.user.is_anonymous)
-        self.assertContains(response, status_code=200, text='topping list')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]['topping'], 'Stub Topping')
 
-    @patch('pizza.views.permissions.DjangoModelPermissionsOrAnonReadOnly.has_permission')
-    @patch('pizza.views.PizzaToppingSerializer')
-    def test_post_can_be_used_by_authenticated_users_with_permissions(self, mock_serializer, mock_permission):
-        """Mocks for permission to be granted. serializer.save() should be called"""
-        mock_permission.return_value = True
-        mock_serializer_instance = mock_serializer.return_value
-        mock_serializer_instance.data = 'topping data'
-        request = self.factory.post("/toppings/", {'topping_name': 'data'}, format='json')
+    def test_post_should_return_201_with_response_if_serializer_is_valid(self):
+        request = self.factory.post("/toppings/", {'topping': 'topping data'}, format='json')
         response = self.topping_list_view(request)
 
-        mock_serializer_instance.save.assert_called()  # serializer.save()
-        self.assertNotContains(response, status_code=201, text='Authentication credentials were not provided')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['topping'], 'topping data')
+        self.assertIsInstance(response, Response)
 
-    @patch('pizza.views.permissions.DjangoModelPermissionsOrAnonReadOnly.has_permission')
-    @patch('pizza.views.PizzaToppingSerializer')
-    def test_post_should_return_201_and_response_with_topping_data(self, mock_serializer, mock_permission):
-        """Checks the response returned from post request"""
-        mock_permission.return_value = True
-        mock_serializer_instance = mock_serializer.return_value
-        mock_serializer_instance.data = 'topping data'
-        request = self.factory.post("/toppings/", {'topping_name': 'data'}, format='json')
+    def test_post_should_return_400_if_serializer_is_invalid(self):
+        """400 is returned when a duplicate entry or there's a missing field"""
+        request = self.factory.post("/toppings/", {'missing field': 'error'}, format='json')
         response = self.topping_list_view(request)
 
-        self.assertContains(response, status_code=201, text='topping data')
+        self.assertContains(response, status_code=400, text='This field is required.')
+        self.assertIsInstance(response, Response)
 
-    @patch('pizza.views.PizzaToppingSerializer')
-    def test_post_should_return_401_if_user_is_not_authenticated(self, mock_serializer):
+    def test_post_should_return_401_if_user_is_not_authenticated(self):
         """When sent by an unathenticated user, exception will be raised before any code in the view is executed"""
-        request = self.factory.post("/toppings/", {'topping_name': 'data'}, format='json')
+        self.permission_patcher.stop()  # stops mocking permission
+        request = self.factory.post("/toppings/", {'topping': 'data'}, format='json')
         response = self.topping_list_view(request)
 
-        mock_serializer.assert_not_called()
         self.assertContains(response, status_code=401, text='Authentication credentials were not provided')
-    
-    @patch('pizza.views.permissions.DjangoModelPermissionsOrAnonReadOnly.has_permission')
-    @patch('pizza.views.PizzaToppingSerializer')
-    def test_post_should_return_400_if_serializer_returns_invalid(self, mock_serializer, mock_permission):
-        """Mocks serializer receiving invalid request via is_valid returning false."""
-        mock_permission.return_value = True
-        mock_serializer_instance = mock_serializer.return_value
-        mock_serializer_instance.errors = 'invalid data'  # serializer.errors
-        mock_serializer_instance.is_valid.return_value = False
 
-        request = self.factory.post("/toppings/", {'error': 'error'}, format='json')
-        response = self.topping_list_view(request)
-
-        mock_serializer_instance.save.assert_not_called()  # serializer.save()
-        self.assertContains(response, status_code=400, text='invalid data')
-
-    @patch('pizza.views.permissions.DjangoModelPermissionsOrAnonReadOnly.has_permission')
-    def test_put_should_return_405(self, mock_permission):
+    def test_unimplemented_put_should_return_405(self):
         """Only GET and POST are implemented"""
-        mock_permission.return_value = True
-        request = self.factory.put("/toppings/", {'topping_name': 'data'}, format='json')
+        request = self.factory.put("/toppings/", {'topping': 'data'}, format='json')
         response = self.topping_list_view(request)
 
         self.assertContains(response, status_code=405, text='Method \\"PUT\\" not allowed')
 
-    @patch('pizza.views.permissions.DjangoModelPermissionsOrAnonReadOnly.has_permission')
-    def test_delete_should_return_405(self, mock_permission):
+    def test_unimplemeneted_delete_should_return_405(self):
         """Only GET and POST are implemented"""
-        mock_permission.return_value = True
         request = self.factory.delete("/toppings/")
         response = self.topping_list_view(request)
 
