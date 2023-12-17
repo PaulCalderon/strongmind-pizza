@@ -2,6 +2,7 @@ from django.contrib.auth.models import User, Group, Permission
 from django.test import TestCase
 from rest_framework.test import APIClient
 from pizza.models import Pizza, PizzaTopping
+from pizza.views import ToppingDetails, PizzaDetails
 
 
 class TestHomepage(TestCase):
@@ -51,6 +52,9 @@ class TestPizzaToppingEndpoints(TestCase):
         cls.chef_user.groups.add(chef_group)
 
         cls.client = APIClient()
+        cls.topping_detail_view = ToppingDetails.as_view()
+        cls.pizza_detail_view = PizzaDetails.as_view()
+
 
     def setUp(self):
         """Sets up database to have 3 toppings initially"""
@@ -109,7 +113,12 @@ class TestPizzaToppingEndpoints(TestCase):
         response = self.client.post('/toppings/', data=post_data)
 
         self.assertContains(response, status_code=400, text='This field is required')
+    
+    def test_get_object_should_return_pizza_topping_object(self):
+        topping_detail_instance = ToppingDetails()
 
+        self.assertIsInstance(topping_detail_instance._get_object(pk=1), PizzaTopping)
+        
     def test_get_should_be_able_to_retrieve_individual_topping_details(self):
         response_pepperoni = self.client.get('/toppings/1')
         response_bacon = self.client.get('/toppings/2')
@@ -325,8 +334,13 @@ class TestPizzaEndpoints(TestCase):
         self.assertDictContainsSubset({'pizza' : 'Pepperoni Pizza'}, response_pepperoni_pizza.data)
         self.assertDictContainsSubset({'toppings' : ['Pepperoni']}, response_pepperoni_pizza.data)
         self.assertEqual(response_bacon_and_onion_pizza.status_code, 200)
-        self.assertDictContainsSubset({'pizza' : 'Bacon and Onion Pizza'}, response_bacon_and_onion_pizza.data) 
+        self.assertDictContainsSubset({'pizza' : 'Bacon and Onion Pizza'}, response_bacon_and_onion_pizza.data)
         self.assertDictContainsSubset({'toppings' : ['Bacon', 'Onion']}, response_bacon_and_onion_pizza.data)
+
+    def test_get_object_should_return_pizza_object(self):
+        pizza_detail_instance = PizzaDetails()
+
+        self.assertIsInstance(pizza_detail_instance._get_object(pk=1), Pizza)
 
     def test_put_should_be_able_to_update_a_pizza_if_user_has_permission(self):
         """PUT should change Bacon and Onion pizza to Pepperoni and Onion Pizza and save to database"""
