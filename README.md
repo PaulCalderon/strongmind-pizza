@@ -1,8 +1,8 @@
 
 # Pizza Store Project 
 This application is a REST API for a fictional pizza store currently implementing two functions, 
-1. ##### Manage Toppings
-2. ##### Manage Pizza
+-  ##### Manage Toppings
+-  ##### Manage Pizza
 
 The project is implemented using Python and uses the Django and Django Rest Framework. It uses DRF's browserable API as the main UI. 
 
@@ -30,17 +30,20 @@ The project was developed under the following versions:
 ##### To install the project locally 
 Clone the repository and navigate to the project root:
 ```bash
-git clone https://github.com/PaulCalderon/strongmind-pizza
+git clone https://github.com/PaulCalderon/strongmind-pizza.git
+```
+```bash
 cd strongmind-pizza
 ```
 and install the requirements (this will included packages used for developing the application)
 ```bash
 pip install -r requirements.txt
 ```
-Alternatively, you can use the package manager pip to install only the packages below.
+Alternatively, you can use the package manager pip to only install the packages below.
 ```python
-pip install django=4.2
-pip install djangorestframework=3.14
+pip install django==4.2
+pip install djangorestframework==3.14
+pip install whitenoise==6.6.0
 ```
 The GitHub repository includes a sqlite database with pre configured groups and users.
 
@@ -101,7 +104,7 @@ You can send a HTTP request to the API and receive a JSON response based on the 
 
 You can also use sites like [reqbin](https://reqbin.com/) to send requests to the API. You can provide the login details using Basic Auth. 
 
-*A raw GET request for an individual topping with id = 1*
+- *A raw GET request for an individual topping with id = 1*
 ```
 GET /toppings/1 HTTP/1.1
 Host: pizzastoredeployment-env.eba-ywgipkmu.ap-southeast-1.elasticbeanstalk.com
@@ -135,7 +138,7 @@ admin
 1234
 ```
 - You can use the admin site to interact with the API but includes the ability to configure the API administrative settings.
-    - You can add create new users and groups, as well as change and assign permissions.
+    - You can create new users and groups, as well as change and assign permissions.
 
 [Link to deployed project's admin site](http://pizzastoredeployment-env.eba-ywgipkmu.ap-southeast-1.elasticbeanstalk.com/admin/)
 
@@ -145,10 +148,10 @@ The project used Django and Django Rest Framework to build and implement the API
 #### Models
 - ##### PizzaToppings 
     -   id | Primary Key 
-    -   topping | Charfield | Unique = True (case-insensitive) 
+    -   topping | CharField | Unique = True (case-insensitive) 
 - ##### Pizza 
     - id | Primary Key 
-    - pizza | Charfield | Unique = True (case-insensitive)
+    - pizza | CharField | Unique = True (case-insensitive)
     - toppings | ManyToManyField 
     
 When checking for duplicates, the comparison is case-insensitive.
@@ -172,17 +175,19 @@ The local project's debug setting is set to True while the deployed project is s
 [Whitenoise](https://pypi.org/project/whitenoise/) was used to help facilitate serving the project's static files.
 
 ## Testing
-The tests are divided into two files tests.py and tests_integration.py.
+The tests are divided into two files tests\_unit.py and tests\_integration.py.
+
+The tests are located at pizza/test/
+
 You can run all the tests by running the command:
 ```
 python manage.py test
 ```
 To only run a specific test 
 ```
-python manage.py test pizza.tests_unit
-python manage.py test pizza.tests_integration
+python manage.py test pizza.test.tests_unit
+python manage.py test pizza.test.tests_integration
 ```
-*manage.py* is located at the project root.
 
 ## Swagger
 The project includes an OpenAPI documentation locally located at http://127.0.0.1:8000/swagger-index
@@ -197,6 +202,7 @@ Available users to be logged in are the same as the users described in the [inst
 
 [Link to deployed project](http://pizzastoredeployment-env.eba-ywgipkmu.ap-southeast-1.elasticbeanstalk.com/)
 
+------------------------------------
 #### Areas of Improvement
 Various points of improvements for the project. (may or may not be feasible)
  - Create an auto populated slug field in the model and use it as part of the URL instead of pk.
